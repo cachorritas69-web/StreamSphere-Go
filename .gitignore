@@ -1,0 +1,13 @@
+.env
+.run/
+bin/
+data/
+media/
+frontend/dist/
+*.db
+*.db-shm
+*.db-wal
+*.log
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,24 @@
+name: Reporte de error
+description: Informa un problema reproducible en StreamSphere
+title: "[BUG] "
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: Explica qué ocurrió y qué esperabas.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      placeholder: "1. Iniciar...\n2. Abrir...\n3. Observar..."
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Entorno
+      placeholder: Arch Linux, Go 1.23, Firefox...

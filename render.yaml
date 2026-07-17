@@ -1,0 +1,217 @@
+envVarGroups:
+  - name: streamsphere-shared
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SERVICE_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGIN
+        value: "*"
+      - key: MAX_UPLOAD_MB
+        value: "100"
+
+services:
+  - type: web
+    name: streamsphere-web-auth
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/auth ./services/auth
+    startCommand: ./bin/auth
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/auth.db
+
+  - type: web
+    name: streamsphere-web-catalog
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/catalog ./services/catalog
+    startCommand: ./bin/catalog
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/catalog.db
+      - key: AUTH_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-auth
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+  - type: web
+    name: streamsphere-web-notification
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/notification ./services/notification
+    startCommand: ./bin/notification
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/notification.db
+
+  - type: web
+    name: streamsphere-web-analytics
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/analytics ./services/analytics
+    startCommand: ./bin/analytics
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/analytics.db
+
+  - type: web
+    name: streamsphere-web-media
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/media ./services/media
+    startCommand: ./bin/media
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/media.db
+      - key: MEDIA_ROOT
+        value: /tmp/streamsphere/media-files
+      - key: CATALOG_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-catalog
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: NOTIFICATION_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-notification
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-gateway
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+  - type: web
+    name: streamsphere-web-playback
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/playback ./services/playback
+    startCommand: ./bin/playback
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/playback.db
+      - key: CATALOG_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-catalog
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: ANALYTICS_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-analytics
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-gateway
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+  - type: web
+    name: streamsphere-web-social
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/social ./services/social
+    startCommand: ./bin/social
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: DB_PATH
+        value: /tmp/streamsphere/social.db
+      - key: CATALOG_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-catalog
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: NOTIFICATION_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-notification
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+  - type: web
+    name: streamsphere-web-gateway
+    runtime: go
+    plan: free
+    region: ohio
+    buildCommand: go build -o bin/gateway ./services/gateway
+    startCommand: ./bin/gateway
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - fromGroup: streamsphere-shared
+      - key: AUTH_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-auth
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: CATALOG_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-catalog
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: MEDIA_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-media
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: PLAYBACK_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-playback
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: SOCIAL_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-social
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: ANALYTICS_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-analytics
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: NOTIFICATION_SERVICE_URL
+        fromService:
+          type: web
+          name: streamsphere-web-notification
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+  - type: web
+    name: streamsphere-web-frontend
+    runtime: static
+    buildCommand: bash scripts/build-frontend.sh
+    staticPublishPath: ./frontend/dist
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: STREAMSPHERE_API_HOST
+        fromService:
+          type: web
+          name: streamsphere-web-gateway
+          envVarKey: RENDER_EXTERNAL_HOSTNAME

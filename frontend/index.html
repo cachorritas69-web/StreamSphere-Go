@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StreamSphere, plataforma web de streaming construida con microservicios en Go.">
+  <title>StreamSphere</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <header class="topbar">
+    <button id="menu-button" class="icon-button mobile-only" aria-label="Abrir menú">☰</button>
+    <a class="brand" href="#home" aria-label="Inicio de StreamSphere">
+      <span class="brand-mark">S</span>
+      <span>Stream<span>Sphere</span></span>
+    </a>
+    <form id="search-form" class="search-box">
+      <input id="search-input" type="search" placeholder="Buscar videos, categorías o etiquetas" autocomplete="off">
+      <button type="submit" aria-label="Buscar">⌕</button>
+    </form>
+    <div class="header-actions">
+      <button id="upload-shortcut" class="button button-ghost hidden">＋ Subir</button>
+      <button id="notifications-button" class="icon-button hidden" aria-label="Notificaciones">🔔<span id="notification-badge" class="badge hidden">0</span></button>
+      <button id="auth-button" class="button button-primary">Iniciar sesión</button>
+      <button id="profile-button" class="profile-chip hidden" aria-label="Abrir perfil"><span id="profile-avatar">U</span><span id="profile-name">Usuario</span></button>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar">
+      <nav>
+        <button class="nav-item active" data-view="home"><span>⌂</span>Inicio</button>
+        <button class="nav-item" data-view="explore"><span>◉</span>Explorar</button>
+        <button class="nav-item auth-only hidden" data-view="history"><span>◷</span>Historial</button>
+        <div class="nav-divider"></div>
+        <button class="nav-item creator-only hidden" data-view="studio"><span>＋</span>Studio</button>
+        <button class="nav-item creator-only hidden" data-view="analytics"><span>▥</span>Analítica</button>
+        <button class="nav-item auth-only hidden" data-view="playlists"><span>▤</span>Playlists</button>
+      </nav>
+      <div class="sidebar-card">
+        <strong>Arquitectura real</strong>
+        <p>8 servicios Go, eventos RabbitMQ y persistencia independiente.</p>
+        <a href="http://localhost:8080/health" target="_blank" rel="noopener">Ver salud del sistema ↗</a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section id="home-view" class="view active">
+        <div class="hero">
+          <div>
+            <span class="eyebrow">STREAMSPHERE ORIGINAL</span>
+            <h1>Descubre, comparte y crea <em>sin límites</em></h1>
+            <p>Una plataforma de video funcional construida con microservicios independientes en Go.</p>
+            <div class="hero-actions">
+              <button id="hero-explore" class="button button-primary">Explorar contenido</button>
+              <button id="hero-create" class="button button-secondary">Crear mi canal</button>
+            </div>
+          </div>
+          <div class="hero-orbit" aria-hidden="true">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="play-core">▶</div>
+            <span class="orbit-dot dot-one">Go</span>
+            <span class="orbit-dot dot-two">JWT</span>
+            <span class="orbit-dot dot-three">MQ</span>
+          </div>
+        </div>
+        <div class="section-heading">
+          <div><span class="eyebrow">NUEVOS LANZAMIENTOS</span><h2>Videos recientes</h2></div>
+          <button class="text-button" data-view-target="explore">Ver todos →</button>
+        </div>
+        <div id="home-video-grid" class="video-grid"></div>
+      </section>
+
+      <section id="explore-view" class="view">
+        <div class="page-heading">
+          <div><span class="eyebrow">CATÁLOGO</span><h1>Explorar videos</h1><p>Encuentra contenido publicado por la comunidad.</p></div>
+        </div>
+        <div id="category-chips" class="chips">
+          <button class="chip active" data-category="Todas">Todas</button>
+          <button class="chip" data-category="Tecnología">Tecnología</button>
+          <button class="chip" data-category="Educación">Educación</button>
+          <button class="chip" data-category="Música">Música</button>
+          <button class="chip" data-category="Gaming">Gaming</button>
+          <button class="chip" data-category="Entretenimiento">Entretenimiento</button>
+        </div>
+        <div id="explore-video-grid" class="video-grid"></div>
+      </section>
+
+      <section id="studio-view" class="view">
+        <div class="page-heading split-heading">
+          <div><span class="eyebrow">CREATOR STUDIO</span><h1>Publica un nuevo video</h1><p>Crea los metadatos y procesa el archivo en un flujo completo.</p></div>
+          <span class="status-pill">FFmpeg habilitado</span>
+        </div>
+        <div class="studio-layout">
+          <form id="upload-form" class="panel form-panel">
+            <div class="form-grid">
+              <label class="full">Título<input id="video-title" required minlength="3" maxlength="150" placeholder="Ej. Introducción a Go"></label>
+              <label class="full">Descripción<textarea id="video-description" rows="4" placeholder="Cuéntale a la audiencia de qué trata"></textarea></label>
+              <label>Categoría<select id="video-category"><option>Tecnología</option><option>Educación</option><option>Música</option><option>Gaming</option><option>Entretenimiento</option><option>General</option></select></label>
+              <label>Visibilidad<select id="video-visibility"><option value="PUBLIC">Público</option><option value="UNLISTED">No listado</option><option value="PRIVATE">Privado</option></select></label>
+              <label class="full">Etiquetas<input id="video-tags" placeholder="go, microservicios, backend"></label>
+              <label class="file-drop full" id="file-drop">
+                <input id="video-file" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" required>
+                <span class="file-icon">⇧</span>
+                <strong id="file-name">Selecciona o arrastra un video</strong>
+                <small>MP4, MOV, MKV o WEBM · máximo configurado: 500 MB</small>
+              </label>
+            </div>
+            <button class="button button-primary full-button" type="submit">Crear y procesar video</button>
+          </form>
+          <aside class="panel process-panel">
+            <h3>Estado del procesamiento</h3>
+            <div id="processing-empty" class="empty-compact"><span>⚙</span><p>Al subir un video verás aquí el avance de FFmpeg.</p></div>
+            <div id="processing-state" class="hidden">
+              <div class="processing-header"><strong id="processing-label">Preparando...</strong><span id="processing-percent">0%</span></div>
+              <div class="progress"><div id="processing-bar"></div></div>
+              <p id="processing-message" class="muted">El trabajo se ejecuta de manera asíncrona.</p>
+            </div>
+            <div class="service-list">
+              <div><span class="service-dot"></span>Catálogo registra metadatos</div>
+              <div><span class="service-dot"></span>Media procesa con FFmpeg</div>
+              <div><span class="service-dot"></span>RabbitMQ publica el evento</div>
+              <div><span class="service-dot"></span>Notificaciones avisa al creador</div>
+            </div>
+          </aside>
+        </div>
+        <div class="section-heading"><div><span class="eyebrow">MI CONTENIDO</span><h2>Videos del canal</h2></div></div>
+        <div id="my-video-grid" class="video-grid"></div>
+      </section>
+
+      <section id="history-view" class="view">
+        <div class="page-heading"><div><span class="eyebrow">ACTIVIDAD</span><h1>Historial de reproducción</h1><p>Tu progreso se guarda mediante el servicio de analítica.</p></div></div>
+        <div id="history-list" class="list-panel"></div>
+      </section>
+
+      <section id="analytics-view" class="view">
+        <div class="page-heading"><div><span class="eyebrow">MÉTRICAS</span><h1>Analítica del creador</h1><p>Vistas, tiempo reproducido e interacciones de tus videos.</p></div></div>
+        <div id="metric-cards" class="metric-grid"></div>
+        <div class="panel"><h3>Videos destacados</h3><div id="top-videos" class="table-wrap"></div></div>
+      </section>
+
+      <section id="playlists-view" class="view">
+        <div class="page-heading split-heading"><div><span class="eyebrow">BIBLIOTECA</span><h1>Mis playlists</h1></div><button id="new-playlist-button" class="button button-primary">Nueva playlist</button></div>
+        <div id="playlist-grid" class="playlist-grid"></div>
+      </section>
+
+      <section id="notifications-view" class="view">
+        <div class="page-heading split-heading"><div><span class="eyebrow">ACTUALIZACIONES</span><h1>Notificaciones</h1></div><button id="read-all-button" class="button button-ghost">Marcar todas como leídas</button></div>
+        <div id="notification-list" class="list-panel"></div>
+      </section>
+
+      <section id="profile-view" class="view">
+        <div class="profile-hero panel">
+          <div id="large-avatar" class="large-avatar">U</div>
+          <div><span class="eyebrow">CUENTA</span><h1 id="profile-title">Mi perfil</h1><p id="profile-email"></p><span id="profile-role" class="status-pill"></span></div>
+          <button id="logout-button" class="button button-danger">Cerrar sesión</button>
+        </div>
+        <div id="channel-card" class="panel"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="auth-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <div class="modal-backdrop" data-close-modal="auth-modal"></div>
+    <div class="modal-card auth-card">
+      <button class="modal-close" data-close-modal="auth-modal" aria-label="Cerrar">×</button>
+      <div class="auth-brand"><span class="brand-mark">S</span></div>
+      <h2 id="auth-title">Bienvenido de nuevo</h2>
+      <p id="auth-subtitle" class="muted">Inicia sesión para comentar, crear y guardar tu progreso.</p>
+      <div class="auth-tabs"><button class="active" data-auth-mode="login">Iniciar sesión</button><button data-auth-mode="register">Registrarme</button></div>
+      <form id="login-form">
+        <label>Usuario o correo<input id="login-identity" required autocomplete="username" placeholder="demo@streamsphere.local"></label>
+        <label>Contraseña<input id="login-password" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+        <button class="button button-primary full-button" type="submit">Entrar a StreamSphere</button>
+        <p class="demo-note">Demo: <strong>demo@streamsphere.local</strong> / <strong>Demo123!</strong></p>
+      </form>
+      <form id="register-form" class="hidden">
+        <label>Nombre de usuario<input id="register-username" required minlength="3" maxlength="40" autocomplete="username"></label>
+        <label>Correo<input id="register-email" type="email" required autocomplete="email"></label>
+        <label>Contraseña<input id="register-password" type="password" required minlength="8" autocomplete="new-password"></label>
+        <button class="button button-primary full-button" type="submit">Crear cuenta</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="channel-modal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal="channel-modal"></div>
+    <form id="channel-form" class="modal-card compact-card">
+      <button class="modal-close" type="button" data-close-modal="channel-modal">×</button>
+      <span class="eyebrow">CONVIÉRTETE EN CREADOR</span><h2>Crea tu canal</h2>
+      <label>Nombre del canal<input id="channel-name" required minlength="3" maxlength="80"></label>
+      <label>Descripción<textarea id="channel-description" rows="3"></textarea></label>
+      <button class="button button-primary full-button" type="submit">Crear canal</button>
+    </form>
+  </div>
+
+  <div id="playlist-modal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal="playlist-modal"></div>
+    <form id="playlist-form" class="modal-card compact-card">
+      <button class="modal-close" type="button" data-close-modal="playlist-modal">×</button>
+      <span class="eyebrow">NUEVA COLECCIÓN</span><h2>Crear playlist</h2>
+      <label>Nombre<input id="playlist-name" required minlength="2" maxlength="80"></label>
+      <label>Visibilidad<select id="playlist-visibility"><option value="PRIVATE">Privada</option><option value="PUBLIC">Pública</option></select></label>
+      <button class="button button-primary full-button" type="submit">Guardar playlist</button>
+    </form>
+  </div>
+
+  <div id="video-modal" class="modal video-modal" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal="video-modal"></div>
+    <div class="modal-card video-dialog">
+      <button class="modal-close video-close" data-close-modal="video-modal">×</button>
+      <div class="player-wrap"><video id="video-player" controls playsinline></video><div id="player-loading" class="player-loading">Cargando reproducción...</div></div>
+      <div class="video-detail-grid">
+        <article>
+          <span id="detail-category" class="eyebrow"></span><h2 id="detail-title"></h2><p id="detail-description" class="video-description"></p>
+          <div class="video-actions">
+            <button id="like-button" class="button button-secondary">👍 <span id="like-count">0</span></button>
+            <button id="dislike-button" class="button button-secondary">👎 <span id="dislike-count">0</span></button>
+            <button id="subscribe-button" class="button button-primary">Suscribirme</button>
+          </div>
+        </article>
+        <aside class="comments-panel">
+          <div class="comments-heading"><h3>Comentarios</h3><span id="comment-count" class="muted"></span></div>
+          <form id="comment-form" class="comment-form"><input id="comment-input" placeholder="Escribe un comentario" maxlength="1000"><button class="button button-primary" type="submit">Publicar</button></form>
+          <div id="comment-list" class="comment-list"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

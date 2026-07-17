@@ -1,0 +1,222 @@
+openapi: 3.0.3
+info:
+  title: StreamSphere Go API
+  version: 1.0.0
+  description: Contratos principales expuestos por el API Gateway.
+servers:
+  - url: http://localhost:8080
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        errorCode: { type: string }
+        timestamp: { type: string, format: date-time }
+    VideoInput:
+      type: object
+      required: [channelId, title]
+      properties:
+        channelId: { type: string, format: uuid }
+        title: { type: string, minLength: 3, maxLength: 150 }
+        description: { type: string }
+        category: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE, UNLISTED]
+paths:
+  /health:
+    get:
+      summary: Salud del API Gateway
+      responses:
+        '200': { description: Gateway disponible }
+  /health/dependencies:
+    get:
+      summary: Salud agregada del Gateway y sus dependencias
+      responses:
+        '200': { description: Todos los servicios están disponibles }
+        '503': { description: Existe al menos un servicio no disponible }
+  /api/auth/register:
+    post:
+      summary: Registrar usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201': { description: Usuario registrado y JWT generado }
+        '409': { description: Usuario o correo duplicado }
+  /api/auth/login:
+    post:
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emailOrUsername, password]
+              properties:
+                emailOrUsername: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: JWT y datos del usuario }
+        '401': { description: Credenciales inválidas }
+  /api/users/me:
+    get:
+      summary: Obtener perfil autenticado
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Usuario y canal }
+  /api/channels:
+    post:
+      summary: Crear canal y convertir al usuario en creador
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        '201': { description: Canal creado y JWT actualizado }
+  /api/videos:
+    post:
+      summary: Crear metadatos de video
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VideoInput' }
+      responses:
+        '201': { description: Video creado en DRAFT }
+  /api/videos/search:
+    get:
+      summary: Buscar videos públicos y publicados
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: category, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+        - { in: query, name: size, schema: { type: integer, default: 12 } }
+      responses:
+        '200': { description: Resultados paginados }
+  /api/videos/{id}:
+    get:
+      summary: Consultar detalle de video
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Detalle del video }
+        '404': { description: Video inexistente o privado }
+  /api/media/videos/{id}/upload:
+    post:
+      summary: Subir archivo para procesamiento
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: Job de procesamiento creado }
+  /api/media/jobs/{id}:
+    get:
+      summary: Consultar progreso del procesamiento
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Estado y porcentaje del job }
+  /api/playback/videos/{id}/manifest:
+    get:
+      summary: Obtener URL de reproducción
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: URL temporal de reproducción }
+        '409': { description: Video aún no disponible }
+  /api/playback/events:
+    post:
+      summary: Registrar progreso de reproducción
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [videoId, eventType]
+              properties:
+                videoId: { type: string, format: uuid }
+                eventType: { type: string, enum: [STARTED, PROGRESS, COMPLETED] }
+                second: { type: integer, minimum: 0 }
+      responses:
+        '201': { description: Evento registrado }
+  /api/videos/{id}/comments:
+    get:
+      summary: Listar comentarios
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Comentarios paginados }
+    post:
+      summary: Publicar comentario
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 1000 }
+                parentId: { type: string }
+      responses:
+        '201': { description: Comentario publicado }
+  /api/analytics/creators/me:
+    get:
+      summary: Consultar métricas del creador
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Vistas, tiempo visto y videos destacados }
+  /api/history/me:
+    get:
+      summary: Consultar historial del usuario
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Historial de reproducción }
+  /api/notifications/me:
+    get:
+      summary: Consultar notificaciones
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Notificaciones y contador no leído }

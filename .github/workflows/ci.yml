@@ -1,0 +1,50 @@
+name: CI StreamSphere
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Descargar dependencias
+        run: go mod download
+
+      - name: Verificar formato
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "Archivos sin formato:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Analizar código
+        run: go vet ./...
+
+      - name: Ejecutar pruebas
+        run: go test ./...
+
+      - name: Compilar todos los servicios
+        run: |
+          mkdir -p bin
+          for service in auth catalog media playback social analytics notification gateway frontend; do
+            go build -o "bin/$service" "./services/$service"
+          done
