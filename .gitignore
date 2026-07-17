@@ -2,7 +2,7 @@
 .run/
 bin/
 data/
-media/
+/media/
 frontend/dist/
 *.db
 *.db-shm
