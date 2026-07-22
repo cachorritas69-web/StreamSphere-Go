@@ -103,6 +103,20 @@ func main() {
 			common.Fail(writer, http.StatusBadGateway, "SERVICE_UNAVAILABLE", "El microservicio no está disponible temporalmente")
 		}
 		proxy.ModifyResponse = func(response *http.Response) error {
+			// El Gateway es el único responsable de los encabezados CORS.
+			// Se eliminan los enviados por el microservicio para evitar duplicados.
+			for _, header := range []string{
+				"Access-Control-Allow-Origin",
+				"Access-Control-Allow-Headers",
+				"Access-Control-Allow-Methods",
+				"Access-Control-Expose-Headers",
+				"Access-Control-Allow-Credentials",
+				"X-Request-ID",
+				"Vary",
+			} {
+				response.Header.Del(header)
+			}
+
 			if response.StatusCode >= 500 {
 				state.failure()
 			} else {
